@@ -58,7 +58,10 @@ app.post('/upload/init', (req, res) => {
     res.json({ uploadId });
 });
 
-app.post('/upload/chunk/:uploadId', express.raw({ limit: '10mb', type: '*/*' }), (req, res) => {
+app.post('/upload/chunk/:uploadId', express.raw({ 
+    limit: '10mb', 
+    type: 'application/octet-stream' 
+}), (req, res) => {
     const { uploadId } = req.params;
     const upload = uploads.get(uploadId);
     const chunkSize = req.body.length;
@@ -68,7 +71,7 @@ app.post('/upload/chunk/:uploadId', express.raw({ limit: '10mb', type: '*/*' }),
     }
 
     try {
-        upload.writeStream.write(req.body);
+        upload.writeStream.write(Buffer.from(req.body));
         upload.bytesReceived += chunkSize;
 
         const progress = Math.round((upload.bytesReceived / upload.fileSize) * 100);

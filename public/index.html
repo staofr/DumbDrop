@@ -90,12 +90,15 @@
                 const end = Math.min(this.position + CHUNK_SIZE, this.file.size);
                 const blob = this.file.slice(start, end);
                 this.position = end;
-                return blob;
+                return await blob.arrayBuffer();
             }
 
             async uploadChunk(chunk) {
                 const response = await fetch(`/upload/chunk/${this.uploadId}`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    },
                     body: chunk
                 });
 
