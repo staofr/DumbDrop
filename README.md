@@ -68,23 +68,6 @@ docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads dumbdrop
 docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" dumbdrop
 ```
 
-### Running on Unraid
-
-1. Add the container through Community Applications or use this template URL:
-```
-https://raw.githubusercontent.com/abiteman/DumbDrop/main/dumbdrop.xml
-```
-
-2. Configure:
-   - Set your desired host port (default: 3000)
-   - Choose your upload directory path (where files will be stored on your Unraid system)
-
-## Environment Variables
-
-| Variable    | Description                | Default     |
-|------------|----------------------------|-------------|
-| PORT       | Server port               | 3000        |
-
 ## Usage
 
 1. Open your browser and navigate to `http://localhost:3000`
