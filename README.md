@@ -35,6 +35,20 @@ npm start
 
 ### Running with Docker
 
+#### Pull from Docker Hub
+```bash
+# Pull the image
+docker pull abite3/dumbdrop:latest
+
+# Run the container
+# For Linux/Mac:
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/file_uploads --env-file .env abite3/dumbdrop:latest
+
+# For Windows PowerShell:
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/file_uploads" --env-file .env abite3/dumbdrop:latest
+```
+
+#### Build Locally
 1. Build the Docker image:
 ```bash
 docker build -t dumbdrop .
@@ -69,4 +83,4 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/file_uploads" --env-file .
 - Backend: Node.js with Express
 - Frontend: Vanilla JavaScript with modern drag-and-drop API
 - File handling: Multer middleware
-- Containerization: Docker 
+- Containerization: Docker with automated builds via GitHub Actions 
