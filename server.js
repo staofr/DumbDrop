@@ -32,88 +32,79 @@ try {
     process.exit(1); // Exit if we can't write to the directory
 }
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Double-check directory is writable
-        fs.access(uploadDir, fs.constants.W_OK, (err) => {
-            if (err) {
-                log.error(`Upload directory not writable: ${err.message}`);
-                cb(new Error('Upload directory not writable'));
-                return;
-            }
-            log.info(`Writing to directory: ${uploadDir}`);
-            cb(null, uploadDir);
-        });
-    },
-    filename: (req, file, cb) => {
-        const filename = `${Date.now()}-${file.originalname}`;
-        log.info(`Processing file: ${file.originalname} -> ${filename}`);
-        cb(null, filename);
-    }
-});
-
-const upload = multer({ 
-    storage: storage,
-    limits: {
-        fileSize: 1024 * 1024 * 1024 // 1GB limit
-    }
-}).array('files');
-
 // Middleware
 app.use(cors());
 app.use(express.static('public'));
+app.use(express.json());
+
+// Store ongoing uploads
+const uploads = new Map();
 
 // Routes
-app.post('/upload', (req, res) => {
-    upload(req, res, (err) => {
-        if (err) {
-            log.error(`Upload failed: ${err.message}`);
-            return res.status(400).json({ 
-                message: 'Upload failed', 
-                error: err.message 
-            });
-        }
+app.post('/upload/init', (req, res) => {
+    const { filename, fileSize } = req.body;
+    const uploadId = Date.now().toString();
+    const filePath = path.join(uploadDir, `${uploadId}-${filename}`);
+    
+    uploads.set(uploadId, {
+        filename,
+        filePath,
+        fileSize,
+        bytesReceived: 0,
+        writeStream: fs.createWriteStream(filePath)
+    });
 
-        if (!req.files || req.files.length === 0) {
-            log.error('No files were uploaded');
-            return res.status(400).json({ message: 'No files uploaded' });
-        }
+    log.info(`Initialized upload for ${filename} (${fileSize} bytes)`);
+    res.json({ uploadId });
+});
 
-        const fileDetails = req.files.map(f => ({
-            originalName: f.originalname,
-            savedAs: f.filename,
-            size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
-            path: path.join(uploadDir, f.filename)
-        }));
+app.post('/upload/chunk/:uploadId', express.raw({ limit: '10mb', type: '*/*' }), (req, res) => {
+    const { uploadId } = req.params;
+    const upload = uploads.get(uploadId);
+    const chunkSize = req.body.length;
 
-        // Verify files were actually written
-        const verificationErrors = [];
-        fileDetails.forEach(f => {
-            if (!fs.existsSync(f.path)) {
-                verificationErrors.push(`File not written: ${f.savedAs}`);
-                log.error(`File not found after upload: ${f.path}`);
-            }
-        });
+    if (!upload) {
+        return res.status(404).json({ error: 'Upload not found' });
+    }
 
-        if (verificationErrors.length > 0) {
-            log.error('File verification failed');
-            return res.status(500).json({ 
-                message: 'Upload verification failed', 
-                errors: verificationErrors 
-            });
-        }
+    try {
+        upload.writeStream.write(req.body);
+        upload.bytesReceived += chunkSize;
 
-        log.success(`Successfully uploaded ${req.files.length} files to ${uploadDir}:`);
-        fileDetails.forEach(f => {
-            log.success(`- ${f.originalName} (${f.size}) as ${f.savedAs}`);
-        });
+        const progress = Math.round((upload.bytesReceived / upload.fileSize) * 100);
+        log.info(`Received chunk for ${upload.filename}: ${progress}%`);
 
         res.json({ 
-            message: 'Files uploaded successfully',
-            files: fileDetails
+            bytesReceived: upload.bytesReceived,
+            progress
         });
-    });
+
+        // Check if upload is complete
+        if (upload.bytesReceived >= upload.fileSize) {
+            upload.writeStream.end();
+            uploads.delete(uploadId);
+            log.success(`Upload completed: ${upload.filename}`);
+        }
+    } catch (err) {
+        log.error(`Chunk upload failed: ${err.message}`);
+        res.status(500).json({ error: 'Failed to process chunk' });
+    }
+});
+
+app.post('/upload/cancel/:uploadId', (req, res) => {
+    const { uploadId } = req.params;
+    const upload = uploads.get(uploadId);
+
+    if (upload) {
+        upload.writeStream.end();
+        fs.unlink(upload.filePath, (err) => {
+            if (err) log.error(`Failed to delete incomplete upload: ${err.message}`);
+        });
+        uploads.delete(uploadId);
+        log.info(`Upload cancelled: ${upload.filename}`);
+    }
+
+    res.json({ message: 'Upload cancelled' });
 });
 
 // Error handling middleware

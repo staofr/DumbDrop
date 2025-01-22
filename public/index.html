@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dumb Drop - Simple File Upload</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
 <body>
     <div class="container">
@@ -21,24 +23,134 @@
                 <button onclick="document.getElementById('fileInput').click()">Browse Files</button>
             </div>
         </div>
+        <div id="uploadProgress"></div>
         <div id="fileList" class="file-list"></div>
         <button id="uploadButton" class="upload-button" style="display: none;">Upload Files</button>
     </div>
 
     <script>
+        const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+        const MAX_RETRIES = 3;
+        const RETRY_DELAY = 1000;
+
+        class FileUploader {
+            constructor(file) {
+                this.file = file;
+                this.uploadId = null;
+                this.position = 0;
+                this.progressElement = null;
+                this.retries = 0;
+            }
+
+            async start() {
+                try {
+                    await this.initUpload();
+                    await this.uploadChunks();
+                    return true;
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    return false;
+                }
+            }
+
+            async initUpload() {
+                const response = await fetch('/upload/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: this.file.name,
+                        fileSize: this.file.size
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to initialize upload');
+                const data = await response.json();
+                this.uploadId = data.uploadId;
+            }
+
+            async uploadChunks() {
+                this.createProgressElement();
+
+                while (this.position < this.file.size) {
+                    const chunk = await this.readChunk();
+                    try {
+                        await this.uploadChunk(chunk);
+                        this.retries = 0;
+                    } catch (error) {
+                        if (this.retries >= MAX_RETRIES) throw error;
+                        this.retries++;
+                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                        continue;
+                    }
+                }
+            }
+
+            async readChunk() {
+                const start = this.position;
+                const end = Math.min(this.position + CHUNK_SIZE, this.file.size);
+                const blob = this.file.slice(start, end);
+                this.position = end;
+                return blob;
+            }
+
+            async uploadChunk(chunk) {
+                const response = await fetch(`/upload/chunk/${this.uploadId}`, {
+                    method: 'POST',
+                    body: chunk
+                });
+
+                if (!response.ok) throw new Error('Chunk upload failed');
+                const data = await response.json();
+                this.updateProgress(data.progress);
+            }
+
+            createProgressElement() {
+                const container = document.createElement('div');
+                container.className = 'progress-container';
+                
+                const label = document.createElement('div');
+                label.className = 'progress-label';
+                label.textContent = this.file.name;
+
+                const progress = document.createElement('div');
+                progress.className = 'progress';
+                
+                const bar = document.createElement('div');
+                bar.className = 'progress-bar';
+                bar.style.width = '0%';
+
+                progress.appendChild(bar);
+                container.appendChild(label);
+                container.appendChild(progress);
+                
+                document.getElementById('uploadProgress').appendChild(container);
+                this.progressElement = { container, bar };
+            }
+
+            updateProgress(percent) {
+                if (this.progressElement) {
+                    this.progressElement.bar.style.width = `${percent}%`;
+                    if (percent === 100) {
+                        setTimeout(() => {
+                            this.progressElement.container.remove();
+                        }, 1000);
+                    }
+                }
+            }
+        }
+
+        // UI Event Handlers
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
         const uploadButton = document.getElementById('uploadButton');
         let files = [];
 
-        // Prevent default drag behaviors
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, preventDefaults, false);
             document.body.addEventListener(eventName, preventDefaults, false);
         });
 
-        // Highlight drop zone when dragging over it
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, highlight, false);
         });
@@ -47,10 +159,9 @@
             dropZone.addEventListener(eventName, unhighlight, false);
         });
 
-        // Handle dropped files
         dropZone.addEventListener('drop', handleDrop, false);
         fileInput.addEventListener('change', handleFiles, false);
-        uploadButton.addEventListener('click', uploadFiles);
+        uploadButton.addEventListener('click', startUploads);
 
         function preventDefaults(e) {
             e.preventDefault();
@@ -94,34 +205,32 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        async function uploadFiles() {
-            const formData = new FormData();
-            files.forEach(file => {
-                formData.append('files', file);
-            });
+        async function startUploads() {
+            uploadButton.disabled = true;
+            document.getElementById('uploadProgress').innerHTML = '';
+            
+            const results = await Promise.all(
+                files.map(async file => {
+                    const uploader = new FileUploader(file);
+                    return await uploader.start();
+                })
+            );
 
-            try {
-                uploadButton.disabled = true;
-                uploadButton.textContent = 'Uploading...';
-                
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+            const successful = results.filter(r => r).length;
+            
+            Toastify({
+                text: `Uploaded ${successful} of ${files.length} files`,
+                duration: 3000,
+                gravity: "bottom",
+                position: "right",
+                style: {
+                    background: successful === files.length ? "#4CAF50" : "#f44336"
+                }
+            }).showToast();
 
-                const result = await response.json();
-                alert(result.message);
-                
-                // Reset the form
-                files = [];
-                updateFileList();
-                uploadButton.textContent = 'Upload Files';
-            } catch (error) {
-                alert('Error uploading files');
-                console.error('Error:', error);
-            } finally {
-                uploadButton.disabled = false;
-            }
+            files = [];
+            updateFileList();
+            uploadButton.disabled = false;
         }
     </script>
 </body>
