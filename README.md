@@ -2,6 +2,8 @@
 
 A stupidly simple file upload application that provides a clean, modern interface for dragging and dropping files. Built with Node.js and vanilla JavaScript.
 
+No Auth, no storage, no nothing. Just a simple file uploader to drop dumb files into a dumb folder.
+
 ## Features
 
 - Drag and drop file uploads
