@@ -13,6 +13,12 @@ No auth, no storage, no nothing. Just a simple file uploader to drop dumb files 
 - Docker support
 - Configurable upload directory
 
+# Future Features
+- Camera Upload for Mobile
+- Dark Mode toggle
+- Enhanced Progress Features (upload speed display, time remaining estimation)
+- Drag and Drop Directory Support (Maintain file structure in upload)
+
 ## Quick Start
 
 ### Running Locally
