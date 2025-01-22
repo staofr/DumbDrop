@@ -130,3 +130,18 @@ dist
 .pnp.*
 
 uploads/
+local_uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Unraid template
+dumbdrop.xml
+
+# Icon conversion
+convert-icon.js
+
+# OS
+.DS_Store
+Thumbs.db
