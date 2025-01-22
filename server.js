@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const uploadDir = process.env.UPLOAD_DIR || '/uploads';
+const uploadDir = '/uploads';
 
 // Logging helper
 const log = {
@@ -111,7 +111,6 @@ app.post('/upload', (req, res) => {
 
         res.json({ 
             message: 'Files uploaded successfully',
-            uploadDir: uploadDir,
             files: fileDetails
         });
     });
