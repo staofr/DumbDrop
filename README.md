@@ -70,7 +70,7 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" dumbdrop
 
 ## Usage
 
-1. Open your browser and navigate to `http://localhost:3000`
+1. Open your browser and navigate to `http://localhost:3000` (unless another domain has been setup)
 2. Drag and drop files into the upload area or click "Browse Files"
 3. Select one or multiple files
 4. Click "Upload Files"
