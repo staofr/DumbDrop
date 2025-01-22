@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const uploadDir = process.env.UPLOAD_DIR || '/mnt/user/data/media/quickdrop';
+const uploadDir = process.env.UPLOAD_DIR || '/uploads';
 
 // Logging helper
 const log = {
@@ -22,20 +22,27 @@ try {
         fs.mkdirSync(uploadDir, { recursive: true });
         log.info(`Created upload directory: ${uploadDir}`);
     }
+    // Test write permissions immediately
+    fs.accessSync(uploadDir, fs.constants.W_OK);
+    log.success(`Upload directory is writable: ${uploadDir}`);
 } catch (err) {
-    log.error(`Failed to create upload directory: ${err.message}`);
+    log.error(`Directory error: ${err.message}`);
+    log.error(`Failed to access or create upload directory: ${uploadDir}`);
+    log.error('Please check directory permissions and mounting');
+    process.exit(1); // Exit if we can't write to the directory
 }
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Check if directory is writable
+        // Double-check directory is writable
         fs.access(uploadDir, fs.constants.W_OK, (err) => {
             if (err) {
                 log.error(`Upload directory not writable: ${err.message}`);
                 cb(new Error('Upload directory not writable'));
                 return;
             }
+            log.info(`Writing to directory: ${uploadDir}`);
             cb(null, uploadDir);
         });
     },
@@ -76,8 +83,26 @@ app.post('/upload', (req, res) => {
         const fileDetails = req.files.map(f => ({
             originalName: f.originalname,
             savedAs: f.filename,
-            size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`
+            size: `${(f.size / (1024 * 1024)).toFixed(2)} MB`,
+            path: path.join(uploadDir, f.filename)
         }));
+
+        // Verify files were actually written
+        const verificationErrors = [];
+        fileDetails.forEach(f => {
+            if (!fs.existsSync(f.path)) {
+                verificationErrors.push(`File not written: ${f.savedAs}`);
+                log.error(`File not found after upload: ${f.path}`);
+            }
+        });
+
+        if (verificationErrors.length > 0) {
+            log.error('File verification failed');
+            return res.status(500).json({ 
+                message: 'Upload verification failed', 
+                errors: verificationErrors 
+            });
+        }
 
         log.success(`Successfully uploaded ${req.files.length} files to ${uploadDir}:`);
         fileDetails.forEach(f => {
@@ -86,6 +111,7 @@ app.post('/upload', (req, res) => {
 
         res.json({ 
             message: 'Files uploaded successfully',
+            uploadDir: uploadDir,
             files: fileDetails
         });
     });
@@ -102,12 +128,14 @@ app.listen(port, () => {
     log.info(`Server running at http://localhost:${port}`);
     log.info(`Upload directory: ${uploadDir}`);
     
-    // Test directory permissions
-    fs.access(uploadDir, fs.constants.W_OK, (err) => {
-        if (err) {
-            log.error(`WARNING: Upload directory not writable: ${err.message}`);
-        } else {
-            log.success('Upload directory is writable');
-        }
-    });
+    // List directory contents
+    try {
+        const files = fs.readdirSync(uploadDir);
+        log.info(`Current directory contents (${files.length} files):`);
+        files.forEach(file => {
+            log.info(`- ${file}`);
+        });
+    } catch (err) {
+        log.error(`Failed to list directory contents: ${err.message}`);
+    }
 });
