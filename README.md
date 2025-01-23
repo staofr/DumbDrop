@@ -11,13 +11,14 @@ No auth, no storage, no nothing. Just a simple file uploader to drop dumb files 
 - Clean, responsive UI
 - File size display
 - Docker support
+- Dark Mode toggle
 - Configurable file size limits
+- Drag and Drop Directory Support (Maintains file structure in upload)
 
 # Future Features
 - Camera Upload for Mobile
-- Dark Mode toggle
 - Enhanced Progress Features (upload speed display, time remaining estimation)
-- Drag and Drop Directory Support (Maintain file structure in upload)
+
 
 ## Quick Start
 
