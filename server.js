@@ -7,7 +7,8 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const uploadDir = '/uploads';
+const uploadDir = './uploads';  // Local development
+const maxFileSize = parseInt(process.env.MAX_FILE_SIZE || '1024') * 1024 * 1024; // Convert MB to bytes
 
 // Logging helper
 const log = {
@@ -16,20 +17,31 @@ const log = {
     success: (msg) => console.log(`[SUCCESS] ${new Date().toISOString()} - ${msg}`)
 };
 
+// Helper function to ensure directory exists
+async function ensureDirectoryExists(filePath) {
+    const dir = path.dirname(filePath);
+    try {
+        await fs.promises.mkdir(dir, { recursive: true });
+    } catch (err) {
+        log.error(`Failed to create directory ${dir}: ${err.message}`);
+        throw err;
+    }
+}
+
 // Ensure upload directory exists
 try {
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
         log.info(`Created upload directory: ${uploadDir}`);
     }
-    // Test write permissions immediately
     fs.accessSync(uploadDir, fs.constants.W_OK);
     log.success(`Upload directory is writable: ${uploadDir}`);
+    log.info(`Maximum file size set to: ${maxFileSize / (1024 * 1024)}MB`);
 } catch (err) {
     log.error(`Directory error: ${err.message}`);
     log.error(`Failed to access or create upload directory: ${uploadDir}`);
     log.error('Please check directory permissions and mounting');
-    process.exit(1); // Exit if we can't write to the directory
+    process.exit(1);
 }
 
 // Middleware
@@ -41,21 +53,39 @@ app.use(express.json());
 const uploads = new Map();
 
 // Routes
-app.post('/upload/init', (req, res) => {
+app.post('/upload/init', async (req, res) => {
     const { filename, fileSize } = req.body;
-    const uploadId = Date.now().toString();
-    const filePath = path.join(uploadDir, `${uploadId}-${filename}`);
     
-    uploads.set(uploadId, {
-        filename,
-        filePath,
-        fileSize,
-        bytesReceived: 0,
-        writeStream: fs.createWriteStream(filePath)
-    });
+    // Check file size limit
+    if (fileSize > maxFileSize) {
+        log.error(`File size ${fileSize} bytes exceeds limit of ${maxFileSize} bytes`);
+        return res.status(413).json({ 
+            error: 'File too large',
+            limit: maxFileSize,
+            limitInMB: maxFileSize / (1024 * 1024)
+        });
+    }
 
-    log.info(`Initialized upload for ${filename} (${fileSize} bytes)`);
-    res.json({ uploadId });
+    const uploadId = Date.now().toString();
+    const filePath = path.join(uploadDir, filename);
+    
+    try {
+        await ensureDirectoryExists(filePath);
+        
+        uploads.set(uploadId, {
+            filename,
+            filePath,
+            fileSize,
+            bytesReceived: 0,
+            writeStream: fs.createWriteStream(filePath)
+        });
+
+        log.info(`Initialized upload for ${filename} (${fileSize} bytes)`);
+        res.json({ uploadId });
+    } catch (err) {
+        log.error(`Failed to initialize upload: ${err.message}`);
+        res.status(500).json({ error: 'Failed to initialize upload' });
+    }
 });
 
 app.post('/upload/chunk/:uploadId', express.raw({ 

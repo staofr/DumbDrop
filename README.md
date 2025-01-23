@@ -11,7 +11,7 @@ No auth, no storage, no nothing. Just a simple file uploader to drop dumb files 
 - Clean, responsive UI
 - File size display
 - Docker support
-- Configurable upload directory
+- Configurable file size limits
 
 # Future Features
 - Camera Upload for Mobile
@@ -28,9 +28,10 @@ No auth, no storage, no nothing. Just a simple file uploader to drop dumb files 
 npm install
 ```
 
-2. Create an uploads directory and set environment variables in `.env`:
+2. Set environment variables in `.env`:
 ```env
 PORT=3000                  # Port to run the server on
+MAX_FILE_SIZE=1024         # Maximum file size in MB (default: 1024 MB / 1 GB)
 ```
 
 3. Start the server:
@@ -74,11 +75,13 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" dumbdrop
 2. Drag and drop files into the upload area or click "Browse Files"
 3. Select one or multiple files
 4. Click "Upload Files"
-5. Files will be saved to the configured upload directory
+5. Files will be saved to:
+   - Local development: `./uploads` directory
+   - Docker/Unraid: The directory you mapped to `/uploads` in the container
 
 ## Technical Details
 
 - Backend: Node.js with Express
 - Frontend: Vanilla JavaScript with modern drag-and-drop API
-- File handling: Multer middleware (1GB file size limit)
-- Containerization: Docker with automated builds via GitHub Actions 
+- File handling: Chunked file uploads with configurable size limits
+- Containerization: Docker with automated builds via GitHub Actions
