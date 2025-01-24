@@ -3,12 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dumb Drop - Simple File Upload</title>
+    <title>DumbDrop - Simple File Upload</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
 <body>
+    <div id="pin-modal" class="modal">
+        <div class="modal-content">
+            <div class="pin-header">
+                <h1>DumbDrop</h1>
+                <h2>Enter PIN</h2>
+            </div>
+            <div class="pin-container">
+                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            </div>
+            <p id="pin-error" class="error-message"></p>
+            <div class="modal-buttons">
+                <button id="pin-submit" class="primary">Verify PIN</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
             <svg xmlns="http://www.w3.org/2000/svg" class="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -26,7 +45,7 @@
                 <line class="sun" x1="18.36" y1="5.64" x2="19.78" y2="4.22" style="display:none"/>
             </svg>
         </button>
-        <h1>Dumb Drop</h1>
+        <h1>DumbDrop</h1>
         <div class="upload-container" id="dropZone">
             <div class="upload-content">
                 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -412,6 +431,147 @@
         const savedTheme = localStorage.getItem('theme') || 
             (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         setTheme(savedTheme);
+
+        let verifiedPin = null;
+        let pinDigits = null;  // Declare pinDigits at a higher scope
+
+        // Check if PIN is required
+        const checkPinRequired = async () => {
+            try {
+                const response = await fetch('/api/pin-required');
+                const { required } = await response.json();
+                if (required) {
+                    document.getElementById('pin-modal').classList.add('visible');
+                    setupPinHandling();
+                } else {
+                    initializeApp();
+                }
+            } catch (err) {
+                console.error('Error checking PIN requirement:', err);
+            }
+        };
+
+        // Handle PIN input
+        const handlePinInput = (e, index) => {
+            const input = e.target;
+            const value = input.value;
+
+            // Only allow numbers
+            if (!/^\d*$/.test(value)) {
+                input.value = '';
+                return;
+            }
+
+            if (value) {
+                input.classList.add('filled');
+                // Move to next input if available
+                if (index < pinDigits.length - 1) {
+                    pinDigits[index + 1].focus();
+                } else {
+                    // If this is the last digit, submit automatically
+                    const pin = Array.from(pinDigits).map(digit => digit.value).join('');
+                    if (pin.length === 4) {
+                        verifyPin(pin);
+                    }
+                }
+            } else {
+                input.classList.remove('filled');
+            }
+        };
+
+        // Verify PIN
+        const verifyPin = async (pin) => {
+            try {
+                const response = await fetch('/api/verify-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    verifiedPin = pin;
+                    document.getElementById('pin-modal').classList.remove('visible');
+                    initializeApp();
+                } else {
+                    document.getElementById('pin-error').textContent = 'Invalid PIN';
+                    pinDigits.forEach(digit => {
+                        digit.value = '';
+                        digit.classList.remove('filled');
+                    });
+                    pinDigits[0].focus();
+                }
+            } catch (err) {
+                console.error('Error verifying PIN:', err);
+                document.getElementById('pin-error').textContent = 'Error verifying PIN';
+            }
+        };
+
+        // Setup PIN handling
+        const setupPinHandling = () => {
+            pinDigits = Array.from(document.querySelectorAll('.pin-digit'));  // Assign to the outer variable
+            const submitButton = document.getElementById('pin-submit');
+
+            pinDigits.forEach((input, index) => {
+                input.addEventListener('input', (e) => handlePinInput(e, index));
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !input.value && index > 0) {
+                        pinDigits[index - 1].focus();
+                        pinDigits[index - 1].value = '';
+                        pinDigits[index - 1].classList.remove('filled');
+                    }
+                });
+                // Handle paste event
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+                    if (pastedData.length > 0) {
+                        pastedData.split('').forEach((digit, i) => {
+                            if (i < pinDigits.length) {
+                                pinDigits[i].value = digit;
+                                pinDigits[i].classList.add('filled');
+                            }
+                        });
+                        if (pastedData.length === 4) {
+                            verifyPin(pastedData);
+                        } else if (pastedData.length < 4) {
+                            pinDigits[pastedData.length].focus();
+                        }
+                    }
+                });
+            });
+
+            submitButton.addEventListener('click', () => {
+                const pin = pinDigits.map(digit => digit.value).join('');
+                if (pin.length === 4) {
+                    verifyPin(pin);
+                }
+            });
+
+            // Focus first input
+            pinDigits[0].focus();
+        };
+
+        // Add PIN to all API requests
+        const fetchWithPin = async (url, options = {}) => {
+            if (verifiedPin) {
+                options.headers = {
+                    ...options.headers,
+                    'X-Pin': verifiedPin
+                };
+            }
+            return fetch(url, options);
+        };
+
+        // Initialize the app
+        const initializeApp = () => {
+            // Replace all fetch calls with fetchWithPin
+            window.originalFetch = window.fetch;
+            window.fetch = fetchWithPin;
+        };
+
+        // Start the app by checking if PIN is required
+        checkPinRequired();
     </script>
 </body>
 </html>

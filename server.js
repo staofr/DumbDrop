@@ -9,6 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const uploadDir = './uploads';  // Local development
 const maxFileSize = parseInt(process.env.MAX_FILE_SIZE || '1024') * 1024 * 1024; // Convert MB to bytes
+const PIN = process.env.DUMBDROP_PIN;
 
 // Logging helper
 const log = {
@@ -37,6 +38,9 @@ try {
     fs.accessSync(uploadDir, fs.constants.W_OK);
     log.success(`Upload directory is writable: ${uploadDir}`);
     log.info(`Maximum file size set to: ${maxFileSize / (1024 * 1024)}MB`);
+    if (PIN) {
+        log.info('PIN protection enabled');
+    }
 } catch (err) {
     log.error(`Directory error: ${err.message}`);
     log.error(`Failed to access or create upload directory: ${uploadDir}`);
@@ -48,6 +52,44 @@ try {
 app.use(cors());
 app.use(express.static('public'));
 app.use(express.json());
+
+// Pin verification endpoint
+app.post('/api/verify-pin', (req, res) => {
+    const { pin } = req.body;
+    
+    // If no PIN is set in env, always return success
+    if (!PIN) {
+        return res.json({ success: true });
+    }
+
+    // Verify the PIN
+    if (pin === PIN) {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ success: false, error: 'Invalid PIN' });
+    }
+});
+
+// Check if PIN is required
+app.get('/api/pin-required', (req, res) => {
+    res.json({ required: !!PIN });
+});
+
+// Pin protection middleware
+const requirePin = (req, res, next) => {
+    if (!PIN) {
+        return next();
+    }
+
+    const providedPin = req.headers['x-pin'];
+    if (providedPin !== PIN) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+};
+
+// Apply pin protection to all /upload routes
+app.use('/upload', requirePin);
 
 // Store ongoing uploads
 const uploads = new Map();

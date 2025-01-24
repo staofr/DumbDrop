@@ -17,6 +17,7 @@ No auth, no storage, no nothing. Just a simple file uploader to drop dumb files 
 - Dark Mode toggle
 - Configurable file size limits
 - Drag and Drop Directory Support (Maintains file structure in upload)
+- Optional PIN protection
 
 # Future Features
 - Camera Upload for Mobile
@@ -35,7 +36,8 @@ npm install
 2. Set environment variables in `.env`:
 ```env
 PORT=3000                  # Port to run the server on
-MAX_FILE_SIZE=1024         # Maximum file size in MB (default: 1024 MB / 1 GB)
+MAX_FILE_SIZE=1024        # Maximum file size in MB (default: 1024 MB / 1 GB)
+DUMBDROP_PIN=1234         # Optional PIN protection (leave empty to disable)
 ```
 
 3. Start the server:
@@ -52,10 +54,10 @@ docker pull abite3/dumbdrop:latest
 
 # Run the container
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads abite3/dumbdrop:latest
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" abite3/dumbdrop:latest
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
 ```
 
 #### Build Locally
@@ -67,19 +69,20 @@ docker build -t dumbdrop .
 2. Run the container:
 ```bash
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads dumbdrop
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads -e DUMBDROP_PIN=1234 dumbdrop
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" dumbdrop
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" -e DUMBDROP_PIN=1234 dumbdrop
 ```
 
 ## Usage
 
 1. Open your browser and navigate to `http://localhost:3000` (unless another domain has been setup)
-2. Drag and drop files into the upload area or click "Browse Files"
-3. Select one or multiple files
-4. Click "Upload Files"
-5. Files will be saved to:
+2. If PIN protection is enabled, enter the 4-digit PIN
+3. Drag and drop files into the upload area or click "Browse Files"
+4. Select one or multiple files
+5. Click "Upload Files"
+6. Files will be saved to:
    - Local development: `./uploads` directory
    - Docker/Unraid: The directory you mapped to `/uploads` in the container
 
@@ -88,4 +91,5 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" dumbdrop
 - Backend: Node.js with Express
 - Frontend: Vanilla JavaScript with modern drag-and-drop API
 - File handling: Chunked file uploads with configurable size limits
+- Security: Optional PIN protection for uploads
 - Containerization: Docker with automated builds via GitHub Actions
