@@ -560,13 +560,14 @@
                     'X-Pin': verifiedPin
                 };
             }
-            return fetch(url, options);
+            return window.originalFetch(url, options);  // Use originalFetch instead of fetch
         };
 
         // Initialize the app
         const initializeApp = () => {
-            // Replace all fetch calls with fetchWithPin
+            // Store original fetch
             window.originalFetch = window.fetch;
+            // Replace fetch with our version
             window.fetch = fetchWithPin;
         };
 
