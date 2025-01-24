@@ -19,6 +19,14 @@ No auth (unless you want it now!), no storage, no nothing. Just a simple file up
 - Drag and Drop Directory Support (Maintains file structure in upload)
 - Optional PIN protection
 
+## Environment Variables
+
+| Variable      | Description                | Default | Required |
+|--------------|----------------------------|---------|----------|
+| PORT         | Server port                | 3000    | No       |
+| MAX_FILE_SIZE| Maximum file size in MB    | 1024    | No       |
+| DUMBDROP_PIN | 4-digit PIN for protection | None    | No       |
+
 # Future Features
 - Camera Upload for Mobile
 - Enhanced Progress Features (upload speed display, time remaining estimation)
