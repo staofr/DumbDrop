@@ -76,6 +76,20 @@ docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=123
 docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=123456 abite3/dumbdrop:latest
 ```
 
+# Docker Compose
+```yml
+name: <your project name>
+services:
+    dumbdrop:
+        ports:
+            - 3000:3000
+        volumes:
+            - $(pwd)/local_uploads:/app/uploads
+        environment:
+            - DUMBDROP_PIN=123456
+        image: abite3/dumbdrop:latest
+```
+
 #### Build Locally
 1. Build the Docker image:
 ```bash
