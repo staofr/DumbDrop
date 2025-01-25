@@ -17,15 +17,23 @@ No auth (unless you want it now!), no storage, no nothing. Just a simple file up
 - Dark Mode toggle
 - Configurable file size limits
 - Drag and Drop Directory Support (Maintains file structure in upload)
-- Optional PIN protection
+- Optional PIN protection (4-10 digits) with secure validation
 
 ## Environment Variables
 
-| Variable      | Description                | Default | Required |
-|--------------|----------------------------|---------|----------|
-| PORT         | Server port                | 3000    | No       |
-| MAX_FILE_SIZE| Maximum file size in MB    | 1024    | No       |
-| DUMBDROP_PIN | 4-digit PIN for protection | None    | No       |
+| Variable      | Description                           | Default | Required |
+|--------------|---------------------------------------|---------|----------|
+| PORT         | Server port                           | 3000    | No       |
+| MAX_FILE_SIZE| Maximum file size in MB               | 1024    | No       |
+| DUMBDROP_PIN | PIN protection (4-10 digits)          | None    | No       |
+
+## Security Features
+
+- Variable-length PIN support (4-10 digits)
+- Constant-time PIN comparison to prevent timing attacks
+- Automatic input sanitization
+- Secure PIN validation middleware
+- No PIN storage in browser (memory only)
 
 # Future Features
 - Camera Upload for Mobile
@@ -45,7 +53,7 @@ npm install
 ```env
 PORT=3000                  # Port to run the server on
 MAX_FILE_SIZE=1024        # Maximum file size in MB (default: 1024 MB / 1 GB)
-DUMBDROP_PIN=1234         # Optional PIN protection (leave empty to disable)
+DUMBDROP_PIN=123456       # Optional PIN protection (4-10 digits, leave empty to disable)
 ```
 
 3. Start the server:
@@ -62,10 +70,10 @@ docker pull abite3/dumbdrop:latest
 
 # Run the container
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=123456 abite3/dumbdrop:latest
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=123456 abite3/dumbdrop:latest
 ```
 
 #### Build Locally
@@ -77,16 +85,16 @@ docker build -t dumbdrop .
 2. Run the container:
 ```bash
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=1234 dumbdrop
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=123456 dumbdrop
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=1234 dumbdrop
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=123456 dumbdrop
 ```
 
 ## Usage
 
 1. Open your browser and navigate to `http://localhost:3000` (unless another domain has been setup)
-2. If PIN protection is enabled, enter the 4-digit PIN
+2. If PIN protection is enabled, enter the 4-10 digit PIN
 3. Drag and drop files into the upload area or click "Browse Files"
 4. Select one or multiple files
 5. Click "Upload Files"

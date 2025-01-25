@@ -3,13 +3,21 @@ const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 const uploadDir = './uploads';  // Local development
 const maxFileSize = parseInt(process.env.MAX_FILE_SIZE || '1024') * 1024 * 1024; // Convert MB to bytes
-const PIN = process.env.DUMBDROP_PIN;
+
+// Validate and set PIN
+const validatePin = (pin) => {
+    if (!pin) return null;
+    const cleanPin = pin.replace(/\D/g, '');  // Remove non-digits
+    return cleanPin.length >= 4 && cleanPin.length <= 10 ? cleanPin : null;
+};
+const PIN = validatePin(process.env.DUMBDROP_PIN);
 
 // Logging helper
 const log = {
@@ -53,6 +61,19 @@ app.use(cors());
 app.use(express.static('public'));
 app.use(express.json());
 
+// Helper function for constant-time string comparison
+function safeCompare(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') {
+        return false;
+    }
+    
+    // Use Node's built-in constant-time comparison
+    return crypto.timingSafeEqual(
+        Buffer.from(a.padEnd(32)), 
+        Buffer.from(b.padEnd(32))
+    );
+}
+
 // Pin verification endpoint
 app.post('/api/verify-pin', (req, res) => {
     const { pin } = req.body;
@@ -62,8 +83,8 @@ app.post('/api/verify-pin', (req, res) => {
         return res.json({ success: true });
     }
 
-    // Verify the PIN
-    if (pin === PIN) {
+    // Verify the PIN using constant-time comparison
+    if (safeCompare(pin, PIN)) {
         res.json({ success: true });
     } else {
         res.status(401).json({ success: false, error: 'Invalid PIN' });
@@ -72,7 +93,10 @@ app.post('/api/verify-pin', (req, res) => {
 
 // Check if PIN is required
 app.get('/api/pin-required', (req, res) => {
-    res.json({ required: !!PIN });
+    res.json({ 
+        required: !!PIN,
+        length: PIN ? PIN.length : 0
+    });
 });
 
 // Pin protection middleware
@@ -82,7 +106,7 @@ const requirePin = (req, res, next) => {
     }
 
     const providedPin = req.headers['x-pin'];
-    if (providedPin !== PIN) {
+    if (!safeCompare(providedPin, PIN)) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     next();

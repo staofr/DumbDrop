@@ -15,11 +15,8 @@
                 <h1>DumbDrop</h1>
                 <h2>Enter PIN</h2>
             </div>
-            <div class="pin-container">
-                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-                <input type="text" class="pin-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            <div id="pin-container" class="pin-container">
+                <!-- PIN inputs will be dynamically added here -->
             </div>
             <p id="pin-error" class="error-message"></p>
             <div class="modal-buttons">
@@ -435,13 +432,31 @@
         let verifiedPin = null;
         let pinDigits = null;  // Declare pinDigits at a higher scope
 
+        // Create PIN input boxes
+        const createPinInputs = (length) => {
+            const container = document.getElementById('pin-container');
+            container.innerHTML = '';  // Clear existing inputs
+            
+            for (let i = 0; i < length; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'pin-digit';
+                input.maxLength = 1;
+                input.pattern = '[0-9]';
+                input.inputMode = 'numeric';
+                input.autocomplete = 'off';
+                container.appendChild(input);
+            }
+        };
+
         // Check if PIN is required
         const checkPinRequired = async () => {
             try {
                 const response = await fetch('/api/pin-required');
-                const { required } = await response.json();
+                const { required, length } = await response.json();
                 if (required) {
                     document.getElementById('pin-modal').classList.add('visible');
+                    createPinInputs(length);  // Create the required number of input boxes
                     setupPinHandling();
                 } else {
                     initializeApp();
@@ -470,7 +485,7 @@
                 } else {
                     // If this is the last digit, submit automatically
                     const pin = Array.from(pinDigits).map(digit => digit.value).join('');
-                    if (pin.length === 4) {
+                    if (pin.length === pinDigits.length) {
                         verifyPin(pin);
                     }
                 }
@@ -524,7 +539,7 @@
                 // Handle paste event
                 input.addEventListener('paste', (e) => {
                     e.preventDefault();
-                    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+                    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, pinDigits.length);
                     if (pastedData.length > 0) {
                         pastedData.split('').forEach((digit, i) => {
                             if (i < pinDigits.length) {
@@ -532,9 +547,9 @@
                                 pinDigits[i].classList.add('filled');
                             }
                         });
-                        if (pastedData.length === 4) {
+                        if (pastedData.length === pinDigits.length) {
                             verifyPin(pastedData);
-                        } else if (pastedData.length < 4) {
+                        } else if (pastedData.length < pinDigits.length) {
                             pinDigits[pastedData.length].focus();
                         }
                     }
@@ -543,7 +558,7 @@
 
             submitButton.addEventListener('click', () => {
                 const pin = pinDigits.map(digit => digit.value).join('');
-                if (pin.length === 4) {
+                if (pin.length === pinDigits.length) {
                     verifyPin(pin);
                 }
             });

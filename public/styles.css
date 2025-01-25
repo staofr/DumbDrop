@@ -244,20 +244,23 @@ button:disabled {
 
 .pin-container {
     display: flex;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     justify-content: center;
     margin: 2rem 0;
+    max-width: 100%;
+    padding: 0 1rem;
 }
 
 .pin-digit {
-    width: 3.5rem;
-    height: 4rem;
+    width: 2.5rem;
+    height: 3rem;
     padding: 0;
     border: 2px solid var(--secondary-color);
-    border-radius: 12px;
+    border-radius: 8px;
     background-color: var(--textarea-bg);
     color: var(--text-color);
-    font-size: 1.75rem;
+    font-size: 1.25rem;
     text-align: center;
     transition: all 0.2s ease;
     caret-color: var(--primary-color);
@@ -321,12 +324,12 @@ button:disabled {
     }
 
     .pin-container {
-        gap: 0.75rem;
+        gap: 0.4rem;
     }
 
     .pin-digit {
-        width: 3rem;
-        height: 3.5rem;
-        font-size: 1.5rem;
+        width: 2.25rem;
+        height: 2.75rem;
+        font-size: 1.125rem;
     }
 }
