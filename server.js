@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -58,7 +59,7 @@ try {
 
 // Middleware
 app.use(cors());
-app.use(express.static('public'));
+app.use(cookieParser());
 app.use(express.json());
 
 // Helper function for constant-time string comparison
@@ -85,6 +86,13 @@ app.post('/api/verify-pin', (req, res) => {
 
     // Verify the PIN using constant-time comparison
     if (safeCompare(pin, PIN)) {
+        // Set secure cookie
+        res.cookie('DUMBDROP_PIN', pin, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/'
+        });
         res.json({ success: true });
     } else {
         res.status(401).json({ success: false, error: 'Invalid PIN' });
@@ -105,7 +113,7 @@ const requirePin = (req, res, next) => {
         return next();
     }
 
-    const providedPin = req.headers['x-pin'];
+    const providedPin = req.headers['x-pin'] || req.cookies.DUMBDROP_PIN;
     if (!safeCompare(providedPin, PIN)) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -114,6 +122,40 @@ const requirePin = (req, res, next) => {
 
 // Apply pin protection to all /upload routes
 app.use('/upload', requirePin);
+
+// Serve login page and its assets without PIN check
+app.use((req, res, next) => {
+    if (req.path === '/login.html' || req.path === '/styles.css' || req.path.startsWith('/api/')) {
+        return next();
+    }
+
+    // Check PIN requirement
+    if (!PIN) {
+        return next();
+    }
+
+    // Check cookie
+    const providedPin = req.cookies.DUMBDROP_PIN;
+    if (!safeCompare(providedPin, PIN)) {
+        // If requesting HTML or root, redirect to login
+        if (req.path === '/' || req.path.endsWith('.html')) {
+            return res.redirect('/login.html');
+        }
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+});
+
+// Serve static files
+app.use(express.static('public'));
+
+// Handle root route
+app.get('/', (req, res) => {
+    if (PIN && !safeCompare(req.cookies.DUMBDROP_PIN, PIN)) {
+        return res.redirect('/login.html');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Store ongoing uploads
 const uploads = new Map();
