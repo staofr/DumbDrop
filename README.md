@@ -78,7 +78,7 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=1
 
 # Docker Compose
 ```yml
-name: <your project name>
+name: Dumb Drop
 services:
     dumbdrop:
         ports:
