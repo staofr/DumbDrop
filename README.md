@@ -62,10 +62,10 @@ docker pull abite3/dumbdrop:latest
 
 # Run the container
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=1234 abite3/dumbdrop:latest
 ```
 
 #### Build Locally
@@ -77,10 +77,10 @@ docker build -t dumbdrop .
 2. Run the container:
 ```bash
 # For Linux/Mac:
-docker run -p 3000:3000 -v $(pwd)/local_uploads:/uploads -e DUMBDROP_PIN=1234 dumbdrop
+docker run -p 3000:3000 -v $(pwd)/local_uploads:/app/uploads -e DUMBDROP_PIN=1234 dumbdrop
 
 # For Windows PowerShell:
-docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" -e DUMBDROP_PIN=1234 dumbdrop
+docker run -p 3000:3000 -v "${PWD}\local_uploads:/app/uploads" -e DUMBDROP_PIN=1234 dumbdrop
 ```
 
 ## Usage
@@ -92,7 +92,7 @@ docker run -p 3000:3000 -v "${PWD}\local_uploads:/uploads" -e DUMBDROP_PIN=1234 
 5. Click "Upload Files"
 6. Files will be saved to:
    - Local development: `./uploads` directory
-   - Docker/Unraid: The directory you mapped to `/uploads` in the container
+   - Docker/Unraid: The directory you mapped to `/app/uploads` in the container
 
 ## Technical Details
 
