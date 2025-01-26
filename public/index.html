@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DumbDrop - Simple File Upload</title>
+    <title>M-Drop - Simple File Upload</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
@@ -26,7 +26,7 @@
                 <line class="sun" x1="18.36" y1="5.64" x2="19.78" y2="4.22" style="display:none"/>
             </svg>
         </button>
-        <h1>DumbDrop</h1>
+        <h1>M-Drop</h1>
         <div class="upload-container" id="dropZone">
             <div class="upload-content">
                 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,18 +34,17 @@
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <p>Drag and drop files or folders here<br>or</p>
                 <input type="file" id="fileInput" multiple hidden>
                 <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
                 <div class="button-group">
-                    <button onclick="document.getElementById('fileInput').click()">Browse Files</button>
-                    <button onclick="document.getElementById('folderInput').click()">Browse Folders</button>
+                    <button onclick="document.getElementById('fileInput').click()">Parcourir Fichiers</button>
+                    <button onclick="document.getElementById('folderInput').click()">Parcourir Dossiers</button>
                 </div>
             </div>
         </div>
         <div id="uploadProgress"></div>
         <div id="fileList" class="file-list"></div>
-        <button id="uploadButton" class="upload-button" style="display: none;">Upload Files</button>
+        <button id="uploadButton" class="upload-button" style="display: none;">Envoyer</button>
     </div>
 
     <style>
@@ -370,10 +369,10 @@
             const successful = results.filter(r => r).length;
             
             Toastify({
-                text: `Uploaded ${successful} of ${groupedItems.length} items`,
-                duration: 3000,
+                text: `Crypté et envoyé avec succès. La suppression automatique est activée par défaut`,
+                duration: 30000,
                 gravity: "bottom",
-                position: "right",
+                position: "center",
                 style: {
                     background: successful === groupedItems.length ? "#4CAF50" : "#f44336"
                 }
